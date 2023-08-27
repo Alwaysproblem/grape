@@ -4,7 +4,7 @@ An oh-my-zsh theme.
 
 ## Introduction
 
-![grape](image/grape.gif)
+![grape](images/grape.gif)
 
 * real time prompt.
 * command running time cost prompt.
