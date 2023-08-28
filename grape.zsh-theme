@@ -291,9 +291,14 @@ preexec() {
   COMMAND_TIME_BEIGIN="$(current_time_millis)";
 }
 
+async_update_git_status(){
+  async_job update_git_status_worker update_git_status &
+  echo -e "${ZSH_THEME_GIT_STATUS}"
+}
+
 # command execute after
 # REF: http://zsh.sourceforge.net/Doc/Release/Functions.html
-dash_passion_precmd() {
+grape_precmd() {
   # last_cmd
   local last_cmd_return_code=$?;
   local last_cmd_result=true;
@@ -305,7 +310,7 @@ dash_passion_precmd() {
   fi
 
   # update_git_status
-  async_job update_git_status_worker update_git_status
+  async_job update_git_status_worker update_git_status;
 
   # update_command_status
   update_command_status $last_cmd_result;
@@ -321,18 +326,14 @@ function __git_fetch_status(){
 }
 
 function git_fetch_status() {
-  [ ${ZSH_THEME_GIT_FETCH_STATUS} != "0" ] && return 0
-  ZSH_THEME_GIT_FETCH_STATUS=1
-  async_job update_git_status_worker __git_fetch_status
-  ZSH_THEME_GIT_FETCH_STATUS=0
+  __git_fetch_status &!
 }
 
 update_git_status_callback() {
   ZSH_THEME_GIT_STATUS="$(git_status)"
-  # git_fetch_status
 }
 
-function chpwd() {
+function grape_chpwd() {
   __git_prompt_git rev-parse --is-inside-work-tree &>/dev/null || ZSH_THEME_GIT_STATUS="" && return 0
   __git_prompt_git update-index --refresh --assume-unchanged -q &>/dev/null
   update_git_status_callback
@@ -393,8 +394,9 @@ async_register_callback update_git_status_worker update_git_status_callback
 setopt prompt_subst
 
 PROMPT='$(directory) $(command_status) ';
-RPROMPT='${ZSH_THEME_GIT_STATUS}$(real_time)${ZSH_THEME_GIT_RPROMPT_SEPARATOR}%{$FG[242]%}%n@%m${color_reset}${ZSH_THEME_GIT_RPROMPT_SEPARATOR}$(battery)${color_reset}';
+RPROMPT='$(async_update_git_status)$(real_time)${ZSH_THEME_GIT_RPROMPT_SEPARATOR}%{$FG[242]%}%n@%m${color_reset}${ZSH_THEME_GIT_RPROMPT_SEPARATOR}$(battery)${color_reset}';
 
 autoload -Uz add-zsh-hook
-add-zsh-hook precmd dash_passion_precmd
+add-zsh-hook -Uz precmd grape_precmd
+add-zsh-hook -Uz chpwd grape_chpwd
 schedprompt
