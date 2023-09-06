@@ -362,6 +362,21 @@ schedprompt() {
   emulate -L zsh
   zmodload -i zsh/sched
 
+  if [[ -z "ASYNC_PTYS" ]] || [[ "$ASYNC_PTYS" != *update_git_status_worker* ]]; then
+    async_start_worker update_git_status_worker -n -u
+  if
+
+  if [[ -z $ASYNC_CALLBACKS ]]; then
+    async_start_worker update_git_status_worker -n -u
+    async_register_callback update_git_status_worker update_git_status_callback
+  else
+    typeset -gA ASYNC_CALLBACKS
+    local callback=$ASYNC_CALLBACKS[update_git_status_worker]
+    if [[ -z $callback ]]; then
+      async_register_callback update_git_status_worker update_git_status_callback
+    fi
+  fi
+
   integer i=${"${(@)zsh_scheduled_events#*:*:}"[(I)git_fetch_status]}
   # git_fetch_all periodically.
   (( i )) || sched +${ZSH_THEME_GIT_FETCH_STATUS_INTERVAL} git_fetch_status
