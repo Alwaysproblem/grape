@@ -362,9 +362,9 @@ schedprompt() {
   emulate -L zsh
   zmodload -i zsh/sched
 
-  if [[ -z "ASYNC_PTYS" ]] || [[ "$ASYNC_PTYS" != *update_git_status_worker* ]]; then
+  if [[ -z "$ASYNC_PTYS" ]] || [[ "$ASYNC_PTYS" != *update_git_status_worker* ]]; then
     async_start_worker update_git_status_worker -n -u
-  if
+  fi
 
   if [[ -z $ASYNC_CALLBACKS ]]; then
     async_start_worker update_git_status_worker -n -u
