@@ -362,21 +362,6 @@ schedprompt() {
   emulate -L zsh
   zmodload -i zsh/sched
 
-  if [[ -z "$ASYNC_PTYS" ]] || [[ "$ASYNC_PTYS" != *update_git_status_worker* ]]; then
-    async_start_worker update_git_status_worker -n -u
-  fi
-
-  if [[ -z $ASYNC_CALLBACKS ]]; then
-    async_start_worker update_git_status_worker -n -u
-    async_register_callback update_git_status_worker update_git_status_callback
-  else
-    typeset -gA ASYNC_CALLBACKS
-    local callback=$ASYNC_CALLBACKS[update_git_status_worker]
-    if [[ -z $callback ]]; then
-      async_register_callback update_git_status_worker update_git_status_callback
-    fi
-  fi
-
   integer i=${"${(@)zsh_scheduled_events#*:*:}"[(I)git_fetch_status]}
   # git_fetch_all periodically.
   (( i )) || sched +${ZSH_THEME_GIT_FETCH_STATUS_INTERVAL} git_fetch_status
@@ -393,6 +378,21 @@ schedprompt() {
   # `zle .reset-prompt` worked in centos 7.
   if [ "$WIDGET" = "" ] || [ "$WIDGET" = "accept-line" ] ; then
     zle && zle .reset-prompt;
+  fi
+
+  if [[ -z "$ASYNC_PTYS" ]] || [[ "$ASYNC_PTYS" != *update_git_status_worker* ]]; then
+    async_start_worker update_git_status_worker -n -u
+  fi
+
+  if [[ -z $ASYNC_CALLBACKS ]]; then
+    async_start_worker update_git_status_worker -n -u
+    async_register_callback update_git_status_worker update_git_status_callback
+  else
+    typeset -gA ASYNC_CALLBACKS
+    local callback=$ASYNC_CALLBACKS[update_git_status_worker]
+    if [[ -z $callback ]]; then
+      async_register_callback update_git_status_worker update_git_status_callback
+    fi
   fi
 
   # This ensures we're not too far off the start of the minute
