@@ -24,13 +24,6 @@ An oh-my-zsh theme.
 
 ## installation
 
-
-
-
-
-
 ```bash
 wget -O ${ZSH_CUSTOM:=$ZSH/custom}/themes/grape.zsh-theme https://raw.githubusercontent.com/Alwaysproblem/grape/master/grape.zsh-theme
 ```
-
-
