@@ -27,3 +27,11 @@ An oh-my-zsh theme.
 ```bash
 wget -O ${ZSH_CUSTOM:=$ZSH/custom}/themes/grape.zsh-theme https://raw.githubusercontent.com/Alwaysproblem/grape/master/grape.zsh-theme
 ```
+
+asdfasdf
+asdf
+asd
+fas
+dfasd
+fas
+dfasdf
