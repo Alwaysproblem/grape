@@ -30,4 +30,3 @@ wget -O ${ZSH_CUSTOM:=$ZSH/custom}/themes/grape.zsh-theme https://raw.githubuser
 
 
 
-
