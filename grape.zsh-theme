@@ -3,6 +3,7 @@
 #
 # af-magic: https://github.com/ohmyzsh/ohmyzsh/blob/master/themes/af-magic.zsh-theme
 # passion: https://github.com/ChesterYue/ohmyzsh-theme-passion
+# gitstatus: https://github.com/romkatv/gitstatus
 
 ZSH_THEME_GIT_RPROMPT_SYMBOL="";
 ZSH_THEME_GIT_RPROMPT_SYMBOL_ERROR="";

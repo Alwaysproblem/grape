@@ -18,7 +18,7 @@ An oh-my-zsh theme.
 - fira code nerd font mono >= 3.0
 - zsh >= 5.8
 - oh-my-zsh
-- zsh-async
+- [gitstatus](https://github.com/romkatv/gitstatus)
 - oh-my-zsh battery plugin
 - bc
 
