@@ -41,17 +41,13 @@ ZSH_THEME_CLOCK_COLOR="%{$FG[006]%}"
 ZSH_THEME_CLOCK_PREFIX=""
 ZSH_THEME_CLOCK_SUFFIX=""
 
-ZSH_THEME_ZSH_ASYNC_VERSION='v1.8.6';
+ZSH_THEME_GITSTATUS_VERSION='v1.5.3';
 
 # Install zsh-async if it’s not present
-if [[ ! -a ~/.zsh-async ]]; then
-  git clone -b ${ZSH_THEME_ZSH_ASYNC_VERSION} https://github.com/mafredri/zsh-async ~/.zsh-async
+if [[ ! -a ~/gitstatus ]]; then
+  git clone -b ${ZSH_THEME_GITSTATUS_VERSION} --depth=1 https://github.com/romkatv/gitstatus.git ~/gitstatus
 fi
-source ~/.zsh-async/async.zsh
-# Initialize zsh-async
-async_init
-async_start_worker update_git_status_worker -n -u
-
+source ~/gitstatus/gitstatus.plugin.zsh
 
 function strf_real_time() {
   local time_str;
@@ -80,121 +76,40 @@ function directory() {
   echo "${color}$(basename ${directory})${color_reset}";
 }
 
-function __git_branch() {
-  local ref
-  ref=$(__git_prompt_git symbolic-ref HEAD 2> /dev/null) || \
-  ref=$(__git_prompt_git rev-parse --short HEAD 2> /dev/null) || return
-  echo "${ZSH_THEME_GIT_PROMPT_PREFIX}${ZSH_THEME_GIT_PROMPT_BRACH_COLOR}${ref#refs/heads/}${ZSH_THEME_GIT_PROMPT_SUFFIX}"
-}
-
-function vscode_git_status() {
-  [[ "$(__git_prompt_git config --get oh-my-zsh.hide-status 2>/dev/null)" = 1 ]] && return
-
-  # Maps a git status prefix to an internal constant
-  # This cannot use the prompt constants, as they may be empty
-  local -A prefix_constant_map
-  prefix_constant_map=(
-  '\?\? '          'UNTRACKED'
-  '[MTARC][ MTD] '  'STAGED'
-  'D  '            'STAGED'
-  ' [AMTD] '       'UNSTAGED'
-  '[MTARC][MTD] '  'UNSTAGED'
-  '[DAU][DAU] '    'UNMERGED'
-  'ahead'          'AHEAD'
-  'behind'         'BEHIND'
-  'diverged'       'DIVERGED'
-  'stashed'        'STASHED'
-  )
-
-  # Maps the internal constant to the prompt theme
-  local -A constant_prompt_map
-  constant_prompt_map=(
-  'UNTRACKED'         "$ZSH_THEME_GIT_PROMPT_UNTRACKED"
-  'ADDED'             "$ZSH_THEME_GIT_PROMPT_ADDED"
-  'MODIFIED'          "$ZSH_THEME_GIT_PROMPT_MODIFIED"
-  'RENAMED'           "$ZSH_THEME_GIT_PROMPT_RENAMED"
-  'DELETED'           "$ZSH_THEME_GIT_PROMPT_DELETED"
-  'UNMERGED'          "$ZSH_THEME_GIT_PROMPT_UNMERGED"
-  'AHEAD'             "$(git_commits_ahead)"
-  'BEHIND'            "$(git_commits_behind)"
-  'DIVERGED'          "$ZSH_THEME_GIT_PROMPT_DIVERGED"
-  'STASHED'           "$ZSH_THEME_GIT_PROMPT_STASHED"
-  'STAGED'            "$ZSH_THEME_GIT_PROMPT_STAGED"
-  'UNSTAGED'          "$ZSH_THEME_GIT_PROMPT_UNSTAGED"
-  )
-
-  # The order that the prompt displays should be added to the prompt
-  local status_constants
-  status_constants=(
-  UNTRACKED ADDED MODIFIED RENAMED DELETED
-  STASHED UNMERGED AHEAD BEHIND DIVERGED STAGED UNSTAGED
-  )
-
-  local status_text
-  status_text="$(__git_prompt_git status --porcelain -b 2> /dev/null)"
-
-  # Don't continue on a catastrophic failure
-  if [[ $? -eq 128 ]]; then
-  return 1
-  fi
-
-  # A lookup table of each git status encountered
-  local -A statuses_seen
-
-  if __git_prompt_git rev-parse --verify refs/stash &>/dev/null; then
-  statuses_seen[STASHED]=1
-  fi
-
-  local status_lines
-  status_lines=("${(@f)${status_text}}")
-
-  # If the tracking line exists, get and parse it
-  if [[ "$status_lines[1]" =~ "^## [^ ]+ \[(.*)\]" ]]; then
-  local branch_statuses
-  branch_statuses=("${(@s/,/)match}")
-  for branch_status in $branch_statuses; do
-    if [[ ! $branch_status =~ "(behind|diverged|ahead) ([0-9]+)?" ]]; then
-    continue
-    fi
-    local last_parsed_status=$prefix_constant_map[$match[1]]
-    statuses_seen[$last_parsed_status]=$match[2]
-  done
-  fi
-
-  # For each status prefix, do a regex comparison
-  for status_prefix in ${(k)prefix_constant_map}; do
-  local status_constant="${prefix_constant_map[$status_prefix]}"
-  local status_regex=$'(^|\n)'"$status_prefix"
-
-  if [[ "$status_text" =~ $status_regex ]]; then
-    statuses_seen[$status_constant]=1
-  fi
-  done
-
-  # Display the seen statuses in the order specified
-  local status_prompt
-  for status_constant in $status_constants; do
-  if (( ${+statuses_seen[$status_constant]} )); then
-    local next_display=$constant_prompt_map[$status_constant]
-    status_prompt="$next_display$status_prompt"
-  fi
-  done
-
-  echo $status_prompt
-}
-
 function update_git_status() {
-  if __git_prompt_git rev-parse --git-dir &>/dev/null; then
-    GIT_STATUS=$(__git_branch);
-    local git_status="$(vscode_git_status)"
-    if [[ $git_status != "" ]]; then
-      GIT_STATUS+=" ${git_status}";
-    fi
-    GIT_STATUS+=${ZSH_THEME_GIT_PROMPT_END_SUFFIX};
+  emulate -L zsh
+  typeset -g GIT_STATUS=''
+
+  gitstatus_query 'MY'                  || return 1  # error
+  [[ $VCS_STATUS_RESULT == 'ok-sync' ]] || return 0  # not a git repo
+
+  local p
+  local where  # branch name, tag or commit
+
+  if [[ -n $VCS_STATUS_LOCAL_BRANCH ]]; then
+    where=$VCS_STATUS_LOCAL_BRANCH
+  elif [[ -n $VCS_STATUS_TAG ]]; then
+    p+='%f#'
+    where=$VCS_STATUS_TAG
   else
-    GIT_STATUS=""
+    p+='%f@'
+    where=${VCS_STATUS_COMMIT[1,8]}
   fi
+
+  (( $#where > 32 )) && where[13,-13]="…"  # truncate long branch names and tags
+  p+="${ZSH_THEME_GIT_PROMPT_PREFIX}${ZSH_THEME_GIT_PROMPT_BRACH_COLOR}${where//\%/%%}${ZSH_THEME_GIT_PROMPT_SUFFIX}"             # escape %
+
+  (( VCS_STATUS_COMMITS_BEHIND )) && p+="${ZSH_THEME_GIT_COMMITS_BEHIND_PREFIX}${VCS_STATUS_COMMITS_BEHIND}${ZSH_THEME_GIT_COMMITS_BEHIND_SUFFIX}"
+  (( VCS_STATUS_COMMITS_AHEAD && !VCS_STATUS_COMMITS_BEHIND )) && p+=""
+  (( VCS_STATUS_COMMITS_AHEAD  )) && p+="${ZSH_THEME_GIT_COMMITS_AHEAD_PREFIX}${VCS_STATUS_COMMITS_BEHIND}${ZSH_THEME_GIT_COMMITS_AHEAD_SUFFIX}"
+  (( VCS_STATUS_NUM_STAGED     )) && p+="${ZSH_THEME_GIT_PROMPT_STAGED}"
+  (( VCS_STATUS_NUM_UNSTAGED   )) && p+="${ZSH_THEME_GIT_PROMPT_UNSTAGED}"
+  (( VCS_STATUS_NUM_UNTRACKED  )) && p+="${ZSH_THEME_GIT_PROMPT_UNTRACKED}"
+  (( VCS_STATUS_NUM_CONFLICTED )) && p+="${ZSH_THEME_GIT_PROMPT_UNMERGED}"
+
+  GIT_STATUS="${p}"
 }
+
 
 function git_status() {
   update_git_status;
@@ -291,11 +206,6 @@ preexec() {
   COMMAND_TIME_BEIGIN="$(current_time_millis)";
 }
 
-async_update_git_status(){
-  async_job update_git_status_worker update_git_status &
-  echo -e "${ZSH_THEME_GIT_STATUS}"
-}
-
 # command execute after
 # REF: http://zsh.sourceforge.net/Doc/Release/Functions.html
 grape_precmd() {
@@ -310,7 +220,7 @@ grape_precmd() {
   fi
 
   # update_git_status
-  async_job update_git_status_worker update_git_status;
+  update_git_status;
 
   # update_command_status
   update_command_status $last_cmd_result;
@@ -388,13 +298,12 @@ schedprompt() {
 update_command_status true;
 zmodload -i zsh/datetime
 
-# Register callback function for the workers completed jobs
-async_register_callback update_git_status_worker update_git_status_callback
+gitstatus_stop 'MY' && gitstatus_start -s -1 -u -1 -c -1 -d -1 'MY'
 
 setopt prompt_subst
 
 PROMPT='$(directory) $(command_status) ';
-RPROMPT='$(async_update_git_status)$(real_time)${ZSH_THEME_GIT_RPROMPT_SEPARATOR}%{$FG[242]%}%n@%m${color_reset}${ZSH_THEME_GIT_RPROMPT_SEPARATOR}$(battery)${color_reset}';
+RPROMPT='$(git_status)$(real_time)${ZSH_THEME_GIT_RPROMPT_SEPARATOR}%{$FG[242]%}%n@%m${color_reset}${ZSH_THEME_GIT_RPROMPT_SEPARATOR}$(battery)${color_reset}';
 
 autoload -Uz add-zsh-hook
 add-zsh-hook -Uz precmd grape_precmd
